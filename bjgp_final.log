@@ -1,0 +1,1725 @@
+--------------------------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  C:\Users\peter\OneDrive - University of Bristol\NHS data\2022 data\bjgp_final.log
+  log type:  text
+ opened on:  19 Jul 2022, 15:14:14
+
+. *file from https://files.digital.nhs.uk/93/7FD5E8/gp-reg-pat-prac-all.csv JAN 2022
+. import delimited "gp-reg-pat-prac-all.csv"
+(encoding automatically selected: ISO-8859-1)
+(10 vars, 6,527 obs)
+
+. rename code prac_code
+
+. rename number_of_patients no_of_pts
+
+. keep prac_code no_of_pts
+
+. save no_of_pts.dta, replace
+file no_of_pts.dta saved
+
+. 
+. clear
+
+. 
+. ** deprivation data from https://fingertips.phe.org.uk/api/all_data/csv/by_indicator_id?indicator_ids=93553&child_area_type_id=7
+. *value is 93553 score = Deprivation score (IMD 2019) English Indices of Deprivation 2019 from https://fingertips.phe.org.uk/profile/genera
+> l-practice
+. *this data only includes practices with at least 750 patients
+. import delimited "indicator-data.csv"
+(encoding automatically selected: ISO-8859-1)
+(27 vars, 6,547 obs)
+
+. rename value imd_value
+
+. label var imd_value "Deprivation score (IMD 2019) from https://fingertips.phe.org.uk/api#/"
+
+. *drops England totals
+. drop if areacode == "E92000001"
+(2 observations deleted)
+
+. sum imd_value
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+   imd_value |      6,545    23.35564    11.62642   3.404973   68.72102
+
+. xtile imd_decile = imd_value, n(10)
+
+. label var imd_decile "Deciles created from cutting data in stata using xtile n=10"
+
+. tab imd_decile
+
+    Deciles |
+    created |
+       from |
+    cutting |
+    data in |
+stata using |
+ xtile n=10 |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          1 |        655       10.01       10.01
+          2 |        654        9.99       20.00
+          3 |        655       10.01       30.01
+          4 |        654        9.99       40.00
+          5 |        655       10.01       50.01
+          6 |        654        9.99       60.00
+          7 |        655       10.01       70.01
+          8 |        654        9.99       80.00
+          9 |        655       10.01       90.01
+         10 |        654        9.99      100.00
+------------+-----------------------------------
+      Total |      6,545      100.00
+
+. 
+. *checking data my practice checking most deprivated
+. list imd_decile if areacode == "L81054"
+
+      +----------+
+      | imd_de~e |
+      |----------|
+4285. |       10 |
+      +----------+
+
+. *10 = most deprived*
+. *profile https://fingertips.phe.org.uk/profile/general-practice/data#page/12/ati/7/are/L81054
+. 
+. *practice i used to work at CMC should be second least deprived = group 2
+. list imd_decile if areacode == "L81040"
+
+      +----------+
+      | imd_de~e |
+      |----------|
+4275. |        2 |
+      +----------+
+
+. *A random practice K83055 should be least deprived = group 1
+. list imd_decile if areacode == "K83055"
+
+      +----------+
+      | imd_de~e |
+      |----------|
+4154. |        1 |
+      +----------+
+
+. *all pass above testing
+. 
+. rename areacode prac_code
+
+. keep prac_code imd_value imd_decile
+
+. save prac_dep.dta, replace
+file prac_dep.dta saved
+
+. 
+. * 6,507 - 6,389 = 118 excluded practices from baseline of gpps 
+. 
+. clear
+
+. 
+. *GPPS DATA  Ipsos MORI. GP Patient Survey. 2022. Available from: https://www.gp-patient.co.uk/SurveysAndReports?w=0 [Select - 2022 - Pract
+> ice data (unweighted) (csv)] (accessed 19/07/22)
+. 
+. import delimited "GPPS_2022_Practice_data_(unweighted)_(csv)_PUBLIC"
+(encoding automatically selected: UTF-8)
+(996 vars, 6,507 obs)
+
+. keep practice_code      practice_name pcn_code  pcn_name        ics_code        cr_name ics_code        ics_name        distributed     re
+> ceived        resprate q18_12 q18base q18_12pct       q28base q28_12 q28_12pct        q30_recoded_1pct        q112_1pct       q112_2pct   
+>     q112_3pct       q112_4pct       q49_1pct        q48_merged_1pct q48_merged_2pct q48_merged_3pct q48_merged_4pct q48_merged_5pct q48_me
+> rged_6pct q48_merged_7pct q48_merged_8pct q48_merged_9pct 
+
+. rename practice_code prac_code
+
+. 
+. label variable  prac_code       "Practice code"
+
+. label variable  practice_name   "Practice name"
+
+. label variable  ics_code        "ICS Code from NHS datasets"
+
+. label variable  ics_name        "ICS Name"
+
+. *label variable cr_code "Commissioning Region Code"
+. label variable  cr_name "Commissioning Region Name"
+
+. label variable  pcn_code        "PCN code"
+
+. label variable  pcn_name        "PCN Name"
+
+. label variable  distributed     "Total survey forms distributed"
+
+. label variable  received        "Total completed forms received"
+
+. label variable  resprate        "Response rate"
+
+. label variable  q18_12pct       "Overall experience of making an appointment - % Summary result - Good (Combined 'very good' and 'fairly g
+> ood' responses, to be used with base for total base)"
+note: label truncated to 80 characters
+
+. label variable  q28_12pct       "Overall experience of GP practice - % Summary result - Good (Combined 'very good' and 'fairly good' respo
+> nses, to be used with total base)"
+note: label truncated to 80 characters
+
+. label variable  q30_recoded_1pct        "Long-term health condition - % Yes (base excluding 'don't know / can't say')"
+
+. label variable  q112_1pct       "Which of the following best describes you - % Female"
+
+. label variable  q112_2pct       "Which of the following best describes you - % Male"
+
+. label variable  q112_3pct       "Which of the following best describes you - % Non-binary"
+
+. label variable  q112_4pct       "Which of the following best describes you - % Prefer to self-describe"
+
+. label variable  q49_1pct        "Ethnic group - % White - English/Welsh/Scottish/Northern Irish/British"
+
+. label variable  q48_merged_1pct "Age - % Under 16"
+
+. label variable  q48_merged_2pct "Age - % 16 to 24"
+
+. label variable  q48_merged_3pct "Age - % 25 to 34"
+
+. label variable  q48_merged_4pct "Age - % 35 to 44"
+
+. label variable  q48_merged_5pct "Age - % 45 to 54"
+
+. label variable  q48_merged_6pct "Age - % 55 to 64"
+
+. label variable  q48_merged_7pct "Age - % 65 to 74"
+
+. label variable  q48_merged_8pct "Age - % 75 to 84"
+
+. label variable  q48_merged_9pct "Age - % 85 or over     "
+
+. 
+. label variable q28base "Overall experience of GP practice - Total responses"
+
+. label variable q28_12 "Overall experience of GP practice - Summary result - Good (Combined 'very good' and 'fairly good' responses, to be 
+> used with total base)"
+note: label truncated to 80 characters
+
+. 
+. label variable q18_12 "Overall experience of making an appointment - Summary result - Good (Combined 'very good' and 'fairly good' respons
+> es, to be used with total base)"
+note: label truncated to 80 characters
+
+. label variable q18base "Overall experience of making an appointment - Total responses"
+
+. 
+. merge 1:1 prac_code using no_of_pts.dta
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                            36
+        from master                         8  (_merge==1)
+        from using                         28  (_merge==2)
+
+    Matched                             6,499  (_merge==3)
+    -----------------------------------------
+
+. drop if _merge!=3
+(36 observations deleted)
+
+. drop _merge
+
+. merge 1:1 prac_code using prac_dep.dta
+(variable prac_code was str6, now str9 to accommodate using data's values)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                           126
+        from master                        40  (_merge==1)
+        from using                         86  (_merge==2)
+
+    Matched                             6,459  (_merge==3)
+    -----------------------------------------
+
+. drop if _merge!=3
+(126 observations deleted)
+
+. drop _merge
+
+. 
+. sum no_of_pts
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+   no_of_pts |      6,459    9501.069    6404.175          7     108789
+
+. 
+. *look at data and drop practices with low numbers
+. sort no_of_pts
+
+. drop if no_of_pts <1000
+(8 observations deleted)
+
+. drop if no_of_pts ==.
+(0 observations deleted)
+
+. drop if q18_12pct ==.
+(0 observations deleted)
+
+. drop if q18_12pct ==0
+(0 observations deleted)
+
+. drop if q18_12pct ==-97
+(1 observation deleted)
+
+. drop if q28_12pct ==.
+(0 observations deleted)
+
+. drop if q28_12pct ==0
+(0 observations deleted)
+
+. drop if q28_12pct ==-97
+(0 observations deleted)
+
+. *
+. 
+. gen no_of_pts_thous = no_of_pts/1000
+
+. gen no_of_pts_ten_thous = no_of_pts/10000
+
+. gen no_of_pts_five_thous = no_of_pts/5000
+
+. 
+. egen no_of_pts_cut = cut(no_of_pts_thous), at(0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110)
+
+. gen no_of_pts_cut2 = no_of_pts_cut+4.999
+
+. tab no_of_pts_cut2
+
+no_of_pts_c |
+        ut2 |      Freq.     Percent        Cum.
+------------+-----------------------------------
+      4.999 |      1,393       21.60       21.60
+      9.999 |      2,681       41.57       63.16
+     14.999 |      1,537       23.83       86.99
+     19.999 |        520        8.06       95.05
+     24.999 |        179        2.78       97.83
+     29.999 |         59        0.91       98.74
+     34.999 |         31        0.48       99.22
+     39.999 |         16        0.25       99.47
+     44.999 |         11        0.17       99.64
+     49.999 |          7        0.11       99.75
+     54.999 |          4        0.06       99.81
+     59.999 |          5        0.08       99.89
+     64.999 |          2        0.03       99.92
+     69.999 |          1        0.02       99.94
+     79.999 |          1        0.02       99.95
+     89.999 |          1        0.02       99.97
+     94.999 |          1        0.02       99.98
+    109.999 |          1        0.02      100.00
+------------+-----------------------------------
+      Total |      6,450      100.00
+
+. 
+. egen no_of_pts_cut_tens = cut(no_of_pts_thous), at(0, 10, 20, 30, 40, 50, 60, 110)
+
+. 
+. label define no_of_pts_cut_tens 0"1000 to 9,999" 10"10,000 to 19,999" 20"20,000 to 29,999" 30"30,000 to 39,999" 40"40,000 to 49,999" 50"50
+> ,000 to 59,999" 60">=60,000", replace
+
+. label values no_of_pts_cut_tens no_of_pts_cut_tens
+
+. 
+. gen q18_12pct2 = q18_12pct*100
+
+. gen q28_12pct2 = q28_12pct*100
+
+. 
+. save gpq_final.dta, replace
+file gpq_final.dta saved
+
+. clear
+
+. 
+. ** GP FTE
+. * data from https://files.digital.nhs.uk/FD/912D30/GPWPracticeCSV.062021.zip
+. import delimited "8. General Practice – December 2021 Practice Level"
+(encoding automatically selected: ISO-8859-1)
+(693 vars, 6,522 obs)
+
+. keep prac_code total_gp_fte total_gp_extg_fte total_patients
+
+. 
+. label var total_gp_fte "Total GPs Full Time Equivalents"
+
+. label var total_gp_extg_fte "All Fully Qualified GPs (excludes GPs in Training Grade) Full Time Equivalents"
+
+. 
+. drop if total_gp_fte == "ND"
+(23 observations deleted)
+
+. drop if total_gp_extg_fte == "ND"
+(0 observations deleted)
+
+. destring total_gp_fte, replace
+total_gp_fte: all characters numeric; replaced as double
+
+. destring total_gp_extg_fte, replace
+total_gp_extg_fte: all characters numeric; replaced as double
+
+. save fte.dta, replace
+file fte.dta saved
+
+. 
+. clear
+
+. use gpq_final.dta
+
+. 
+. merge 1:1 prac_code using fte.dta
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                           109
+        from master                        30  (_merge==1)
+        from using                         79  (_merge==2)
+
+    Matched                             6,420  (_merge==3)
+    -----------------------------------------
+
+. drop if _merge !=3
+(109 observations deleted)
+
+. list practice_name if total_gp_fte ==0
+
+      +--------------------------------------+
+      |                        practice_name |
+      |--------------------------------------|
+  55. |              MCKENZIE GROUP PRACTICE |
+ 194. |               BOWBURN MEDICAL CENTRE |
+ 612. |                BILTON MEDICAL CENTRE |
+ 818. |               EASTMOOR HEALTH CENTRE |
+ 916. |               ASHOVER MEDICAL CENTRE |
+      |--------------------------------------|
+1035. | PASLEY ROAD HEALTH CENTRE (TK KHONG) |
+1056. |             THURMASTON HEALTH CENTRE |
+1320. |              DENABY MEDICAL PRACTICE |
+1482. |                      WESTWOOD CLINIC |
+1483. | MAPLE SURGERY BAR HILL HEALTH CENTRE |
+      |--------------------------------------|
+1617. |           KIRKLEY MILL HEALTH CENTRE |
+1879. |            ST ANDREWS MEDICAL CENTRE |
+2427. |             UPMINSTER MEDICAL CENTRE |
+2438. |                RAINHAM HEALTH CENTRE |
+2851. |            CHURCH LANE HEALTH CENTRE |
+      |--------------------------------------|
+3016. |              BROMPTON MEDICAL CENTRE |
+3656. |                WOODLEA HOUSE SURGERY |
+4180. |                  GRAHAM ROAD SURGERY |
+5516. |                  CORNERSTONE SURGERY |
+5778. |                GREAT HARWOOD SURGERY |
+      |--------------------------------------|
+5853. |           GARDEN CITY MEDICAL CENTRE |
+6193. |                THE RAVENSCAR SURGERY |
+6319. |              QUAYSIDE MEDICAL CENTRE |
+6335. |               ST NEOTS HEALTH CENTRE |
+6391. |                          SATIS HOUSE |
+      |--------------------------------------|
+6399. |                   SILVER END SURGERY |
+6404. |              LISTER HOUSE CHELLASTON |
+      +--------------------------------------+
+
+. drop if total_gp_extg_fte ==0
+(31 observations deleted)
+
+. gen gp_pt_ratio = total_patients/total_gp_extg_fte
+
+. gen gp_pt_ratio_with_trainees = total_patients/total_gp_fte
+
+. 
+. gen dif_month_between_dec_jan = total_patients - no_of_pts
+
+. *should be 0 as data from 31st december 2021 and 1st Jan 2022
+. sum dif_month_between_dec_jan
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+dif_month_~n |      6,389           0           0          0          0
+
+. 
+. gen dif_trainees = total_gp_fte - total_gp_extg_fte
+
+. sum dif_trainees
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+dif_trainees |      6,389    1.153652    1.605787          0      21.76
+
+. sum dif_trainees if dif_trainees >8
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+dif_trainees |         26    10.32359    3.095111   8.106667      21.76
+
+. gen dif_trainees_ratio = gp_pt_ratio_with_trainees - gp_pt_ratio
+
+. sum dif_trainees_ratio
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+dif_traine~o |      6,389   -390.2167    1004.268   -33852.8          0
+
+. 
+. gen percent_age_over_74 = q48_merged_8pct + q48_merged_9pct
+
+. 
+. rename total_patients total_patients_from_fte_data
+
+. 
+. gen dif_pts = total_patients_from_fte_data - no_of_pts
+
+. sum dif_pts
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+     dif_pts |      6,389           0           0          0          0
+
+. list practice_name if dif_pts >0
+
+. 
+. save gpq_final.dta, replace
+file gpq_final.dta saved
+
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. ***** ANALYSIS ******** *** JUST THOSE USED IN LETTER ****
+. cd "C:\Users\peter\OneDrive - University of Bristol\NHS data\2022 data"
+C:\Users\peter\OneDrive - University of Bristol\NHS data\2022 data
+
+. 
+. clear
+
+. use gpq_final.dta
+
+.  
+. sum no_of_pts
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+   no_of_pts |      6,389    9550.881     6393.68       1022     108789
+
+. 
+. 
+. 
+. 
+. 
+. *Appointment
+. *q18_12 Overall experience of making an appointment - % Summary result - Good (Combined 'very good' and 'fairly good' responses, to be use
+> d with base 
+. 
+. tab no_of_pts_cut_tens, sum(q18_12pct2)
+
+no_of_pts_c |        Summary of q18_12pct2
+    ut_tens |        Mean   Std. dev.       Freq.
+------------+------------------------------------
+  1000 to 9 |   63.295916   15.725388       4,019
+  10,000 to |   56.404837   14.448722       2,052
+  20,000 to |   53.009009   14.074516         238
+  30,000 to |   49.991735   14.869271          47
+  40,000 to |   49.155122    15.27199          17
+  50,000 to |   45.119346   14.013828           9
+   >=60,000 |   48.895639   14.888067           7
+------------+------------------------------------
+      Total |   60.522577   15.702917       6,389
+
+. 
+. *univariable model categorical pts
+. melogit q18_12 i.no_of_pts_cut_tens || prac_code:, bin(q18base) or
+
+Fitting fixed-effects model:
+
+Iteration 0:   log likelihood = -50918.651  
+Iteration 1:   log likelihood = -50645.416  
+Iteration 2:   log likelihood = -50645.395  
+Iteration 3:   log likelihood = -50645.395  
+
+Refining starting values:
+
+Grid node 0:   log likelihood =  -27245.21
+
+Fitting full model:
+
+Iteration 0:   log likelihood =  -27245.21  
+Iteration 1:   log likelihood = -26651.527  (backed up)
+Iteration 2:   log likelihood =   -26634.2  
+Iteration 3:   log likelihood = -26633.141  
+Iteration 4:   log likelihood = -26633.138  
+
+Mixed-effects logistic regression               Number of obs     =      6,389
+Binomial variable: q18base
+Group variable: prac_code                       Number of groups  =      6,389
+
+                                                Obs per group:
+                                                              min =          1
+                                                              avg =        1.0
+                                                              max =          1
+
+Integration method: mvaghermite                 Integration pts.  =          7
+
+                                                Wald chi2(6)      =     392.83
+Log likelihood = -26633.138                     Prob > chi2       =     0.0000
+------------------------------------------------------------------------------------
+            q18_12 | Odds ratio   Std. err.      z    P>|z|     [95% conf. interval]
+-------------------+----------------------------------------------------------------
+no_of_pts_cut_tens |
+ 10,000 to 19,999  |   .7171259   .0140091   -17.02   0.000     .6901876    .7451155
+ 20,000 to 29,999  |   .6164389   .0295453   -10.09   0.000      .561168    .6771536
+ 30,000 to 39,999  |   .5430671   .0568028    -5.84   0.000     .4424059    .6666318
+ 40,000 to 49,999  |   .5271149   .0917314    -3.68   0.000     .3747784    .7413718
+ 50,000 to 59,999  |   .4358024   .1038157    -3.49   0.000     .2732239    .6951213
+         >=60,000  |   .5239409   .1418938    -2.39   0.017     .3081483    .8908507
+                   |
+             _cons |   1.848941    .021089    53.89   0.000     1.808066     1.89074
+-------------------+----------------------------------------------------------------
+prac_code          |
+         var(_cons)|   .4725784   .0094645                      .4543876    .4914973
+------------------------------------------------------------------------------------
+Note: Estimates are transformed only in the first equation to odds ratios.
+Note: _cons estimates baseline odds (conditional on zero random effects).
+LR test vs. logistic model: chibar2(01) = 48024.51    Prob >= chibar2 = 0.0000
+
+. *univariable model continuous pts five thousand
+. melogit q18_12 no_of_pts_five_thous || prac_code:, bin(q18base) or
+
+Fitting fixed-effects model:
+
+Iteration 0:   log likelihood = -50636.974  
+Iteration 1:   log likelihood = -50363.826  
+Iteration 2:   log likelihood = -50363.801  
+Iteration 3:   log likelihood = -50363.801  
+
+Refining starting values:
+
+Grid node 0:   log likelihood = -27230.924
+
+Fitting full model:
+
+Iteration 0:   log likelihood = -27230.924  (not concave)
+Iteration 1:   log likelihood = -26725.688  
+Iteration 2:   log likelihood = -26605.926  
+Iteration 3:   log likelihood =  -26604.92  
+Iteration 4:   log likelihood =  -26604.92  
+
+Mixed-effects logistic regression               Number of obs     =      6,389
+Binomial variable: q18base
+Group variable: prac_code                       Number of groups  =      6,389
+
+                                                Obs per group:
+                                                              min =          1
+                                                              avg =        1.0
+                                                              max =          1
+
+Integration method: mvaghermite                 Integration pts.  =          7
+
+                                                Wald chi2(1)      =     452.71
+Log likelihood = -26604.92                      Prob > chi2       =     0.0000
+--------------------------------------------------------------------------------------
+              q18_12 | Odds ratio   Std. err.      z    P>|z|     [95% conf. interval]
+---------------------+----------------------------------------------------------------
+no_of_pts_five_thous |   .8615659   .0060336   -21.28   0.000      .849821    .8734731
+               _cons |   2.152101   .0347971    47.40   0.000     2.084969    2.221394
+---------------------+----------------------------------------------------------------
+prac_code            |
+           var(_cons)|   .4681101   .0093815                      .4500792    .4868633
+--------------------------------------------------------------------------------------
+Note: Estimates are transformed only in the first equation to odds ratios.
+Note: _cons estimates baseline odds (conditional on zero random effects).
+LR test vs. logistic model: chibar2(01) = 47517.76    Prob >= chibar2 = 0.0000
+
+. 
+. 
+. 
+. *appointments multivariate model continuous pt nos five thousand
+. *MAIN USED IN TEXT
+. 
+. xi: melogit q18_12 no_of_pts_five_thous gp_pt_ratio imd_value q30_recoded_1pct q49_1pct q112_1pct percent_age_over_74 ///
+> || prac_code: , bin(q18base) or
+
+Fitting fixed-effects model:
+
+Iteration 0:   log likelihood = -46347.215  
+Iteration 1:   log likelihood = -46085.445  
+Iteration 2:   log likelihood =  -46085.39  
+Iteration 3:   log likelihood =  -46085.39  
+
+Refining starting values:
+
+Grid node 0:   log likelihood = -27029.988
+
+Fitting full model:
+
+Iteration 0:   log likelihood = -27029.988  (not concave)
+Iteration 1:   log likelihood = -26204.369  
+Iteration 2:   log likelihood = -26179.413  
+Iteration 3:   log likelihood =  -26179.27  
+Iteration 4:   log likelihood =  -26179.27  
+
+Mixed-effects logistic regression               Number of obs     =      6,389
+Binomial variable: q18base
+Group variable: prac_code                       Number of groups  =      6,389
+
+                                                Obs per group:
+                                                              min =          1
+                                                              avg =        1.0
+                                                              max =          1
+
+Integration method: mvaghermite                 Integration pts.  =          7
+
+                                                Wald chi2(7)      =    1418.75
+Log likelihood = -26179.27                      Prob > chi2       =     0.0000
+--------------------------------------------------------------------------------------
+              q18_12 | Odds ratio   Std. err.      z    P>|z|     [95% conf. interval]
+---------------------+----------------------------------------------------------------
+no_of_pts_five_thous |   .8521584   .0057137   -23.86   0.000     .8410329     .863431
+         gp_pt_ratio |    .999956   4.33e-06   -10.17   0.000     .9999475    .9999645
+           imd_value |   .9945751    .000937    -5.77   0.000     .9927404    .9964132
+    q30_recoded_1pct |   .1179137   .0185376   -13.60   0.000     .0866451    .1604666
+            q49_1pct |   1.880809   .0964694    12.32   0.000     1.700926    2.079716
+           q112_1pct |   .3143568   .0598009    -6.08   0.000     .2165193    .4564036
+ percent_age_over_74 |   4.123806   .8166697     7.15   0.000      2.79723    6.079507
+               _cons |   9.945797   1.300706    17.57   0.000     7.696972    12.85166
+---------------------+----------------------------------------------------------------
+prac_code            |
+           var(_cons)|    .403831   .0082057                      .3880641    .4202384
+--------------------------------------------------------------------------------------
+Note: Estimates are transformed only in the first equation to odds ratios.
+Note: _cons estimates baseline odds (conditional on zero random effects).
+LR test vs. logistic model: chibar2(01) = 39812.24    Prob >= chibar2 = 0.0000
+
+. reformat, output(necp) dpcoef(2) dpp(3) to(-) nocons eform
+
+MEGLM formatted output
+
+Outcome variable: q18_12 (Overall experience of making an appointment - Summary result - Good (Combined 'v), n=6389
+----------------------------------------------------------------------------
+Covariate                      N  exp(coef.)    95% Conf. Interval     P>|z|
+----------------------------------------------------------------------------
+No_of_pts_five_thous                                                
+  per unit                  6389        0.85           (0.84-0.86)    <0.001
+Gp_pt_ratio                                                         
+  per unit                  6389        1.00           (1.00-1.00)    <0.001
+Deprivation score (IMD 2019) from https://fingertips.phe.org.uk/api#/
+  per unit                  6389        0.99           (0.99-1.00)    <0.001
+Long-term health condition - % Yes (base excluding 'don't know / can't say')
+  per unit                  6389        0.12           (0.09-0.16)    <0.001
+Ethnic group - % White - English/Welsh/Scottish/Northern Irish/British
+  per unit                  6389        1.88           (1.70-2.08)    <0.001
+Which of the following best describes you - % Female                
+  per unit                  6389        0.31           (0.22-0.46)    <0.001
+Percent_age_over_74                                                 
+  per unit                  6389        4.12           (2.80-6.08)    <0.001
+----------------------------------------------------------------------------
+
+. 
+. 
+. *appointments multivariate model categorical
+. 
+. xi: melogit q18_12 i.no_of_pts_cut_tens gp_pt_ratio imd_value q30_recoded_1pct q49_1pct q112_1pct percent_age_over_74 ///
+> || prac_code: , bin(q18base) or
+i.no_of_pts_c~s   _Ino_of_pts_0-60    (naturally coded; _Ino_of_pts_0 omitted)
+
+Fitting fixed-effects model:
+
+Iteration 0:   log likelihood = -46475.734  
+Iteration 1:   log likelihood = -46219.658  
+Iteration 2:   log likelihood = -46219.611  
+Iteration 3:   log likelihood = -46219.611  
+
+Refining starting values:
+
+Grid node 0:   log likelihood = -27036.902
+
+Fitting full model:
+
+Iteration 0:   log likelihood = -27036.902  (not concave)
+Iteration 1:   log likelihood = -26222.654  
+Iteration 2:   log likelihood = -26194.761  
+Iteration 3:   log likelihood = -26194.545  
+Iteration 4:   log likelihood = -26194.544  
+
+Mixed-effects logistic regression               Number of obs     =      6,389
+Binomial variable: q18base
+Group variable: prac_code                       Number of groups  =      6,389
+
+                                                Obs per group:
+                                                              min =          1
+                                                              avg =        1.0
+                                                              max =          1
+
+Integration method: mvaghermite                 Integration pts.  =          7
+
+                                                Wald chi2(12)     =    1382.30
+Log likelihood = -26194.544                     Prob > chi2       =     0.0000
+-------------------------------------------------------------------------------------
+             q18_12 | Odds ratio   Std. err.      z    P>|z|     [95% conf. interval]
+--------------------+----------------------------------------------------------------
+     _Ino_of_pts_10 |   .6842752   .0127299   -20.39   0.000     .6597745    .7096858
+     _Ino_of_pts_20 |   .5887805   .0265299   -11.76   0.000     .5390128    .6431433
+     _Ino_of_pts_30 |   .5269892    .051472    -6.56   0.000     .4351742    .6381756
+     _Ino_of_pts_40 |   .4790522   .0778517    -4.53   0.000     .3483794    .6587389
+     _Ino_of_pts_50 |   .4546605   .1010504    -3.55   0.000     .2941059    .7028632
+     _Ino_of_pts_60 |    .642426   .1623295    -1.75   0.080     .3915072     1.05416
+        gp_pt_ratio |   .9999535   4.33e-06   -10.73   0.000      .999945     .999962
+          imd_value |    .994595   .0009396    -5.74   0.000     .9927553    .9964382
+   q30_recoded_1pct |   .1117803   .0176144   -13.91   0.000     .0820792    .1522292
+           q49_1pct |   1.877547   .0965641    12.25   0.000     1.697512    2.076677
+          q112_1pct |   .3108336   .0593076    -6.12   0.000      .213854    .4517921
+percent_age_over_74 |   4.452668   .8834451     7.53   0.000      3.01811    6.569095
+              _cons |   8.802604   1.153842    16.59   0.000     6.808258    11.38116
+--------------------+----------------------------------------------------------------
+prac_code           |
+          var(_cons)|   .4058804   .0082448                      .3900383    .4223659
+-------------------------------------------------------------------------------------
+Note: Estimates are transformed only in the first equation to odds ratios.
+Note: _cons estimates baseline odds (conditional on zero random effects).
+LR test vs. logistic model: chibar2(01) = 40050.13    Prob >= chibar2 = 0.0000
+
+. reformat, output(necp) dpcoef(2) dpp(3) to(-) nocons eform
+
+MEGLM formatted output
+
+Outcome variable: q18_12 (Overall experience of making an appointment - Summary result - Good (Combined 'v), n=6389
+----------------------------------------------------------------------------
+Covariate                      N  exp(coef.)    95% Conf. Interval     P>|z|
+----------------------------------------------------------------------------
+No_of_pts_cut_tens                                                  
+  1000 to 9,999*            4019           1                                
+  10,000 to 19,999          2052        0.68           (0.66-0.71)    <0.001
+  20,000 to 29,999           238        0.59           (0.54-0.64)    <0.001
+  30,000 to 39,999            47        0.53           (0.44-0.64)    <0.001
+  40,000 to 49,999            17        0.48           (0.35-0.66)    <0.001
+  50,000 to 59,999             9        0.45           (0.29-0.70)    <0.001
+  >=60,000                     7        0.64           (0.39-1.05)     0.080
+Gp_pt_ratio                                                         
+  per unit                  6389        1.00           (1.00-1.00)    <0.001
+Deprivation score (IMD 2019) from https://fingertips.phe.org.uk/api#/
+  per unit                  6389        0.99           (0.99-1.00)    <0.001
+Long-term health condition - % Yes (base excluding 'don't know / can't say')
+  per unit                  6389        0.11           (0.08-0.15)    <0.001
+Ethnic group - % White - English/Welsh/Scottish/Northern Irish/British
+  per unit                  6389        1.88           (1.70-2.08)    <0.001
+Which of the following best describes you - % Female                
+  per unit                  6389        0.31           (0.21-0.45)    <0.001
+Percent_age_over_74                                                 
+  per unit                  6389        4.45           (3.02-6.57)    <0.001
+----------------------------------------------------------------------------
+* Baseline category
+
+. *wald test
+. test _Ino_of_pts_10 _Ino_of_pts_20 _Ino_of_pts_30 _Ino_of_pts_40 _Ino_of_pts_50  _Ino_of_pts_60
+
+ ( 1)  [q18_12]_Ino_of_pts_10 = 0
+ ( 2)  [q18_12]_Ino_of_pts_20 = 0
+ ( 3)  [q18_12]_Ino_of_pts_30 = 0
+ ( 4)  [q18_12]_Ino_of_pts_40 = 0
+ ( 5)  [q18_12]_Ino_of_pts_50 = 0
+ ( 6)  [q18_12]_Ino_of_pts_60 = 0
+
+           chi2(  6) =  536.38
+         Prob > chi2 =    0.0000
+
+. 
+. 
+. 
+. 
+. 
+. *Overall satisfaction
+. ******* "Overall experience of GP practice - Summary result - Good (Combined 'very good' and 'fairly good' responses, to be used with tota
+> l base)"
+. 
+. tab no_of_pts_cut_tens, sum(q28_12pct2)
+
+no_of_pts_c |        Summary of q28_12pct2
+    ut_tens |        Mean   Std. dev.       Freq.
+------------+------------------------------------
+  1000 to 9 |   77.713969    12.10376       4,019
+  10,000 to |   74.832062   11.672178       2,052
+  20,000 to |   72.075649   11.367544         238
+  30,000 to |   69.799414   11.375274          47
+  40,000 to |   68.899945   15.311064          17
+  50,000 to |   66.652706   11.640799           9
+   >=60,000 |    65.90814   7.9320484           7
+------------+------------------------------------
+      Total |   76.468139   12.071672       6,389
+
+. 
+. *univariable modelc categorical
+. melogit q28_12 i.no_of_pts_cut_tens || prac_code:, bin(q28base) or
+
+Fitting fixed-effects model:
+
+Iteration 0:   log likelihood = -44703.342  
+Iteration 1:   log likelihood = -43798.776  
+Iteration 2:   log likelihood = -43797.838  
+Iteration 3:   log likelihood = -43797.838  
+
+Refining starting values:
+
+Grid node 0:   log likelihood = -25785.638
+
+Fitting full model:
+
+Iteration 0:   log likelihood = -25785.638  
+Iteration 1:   log likelihood = -25309.171  (backed up)
+Iteration 2:   log likelihood = -25166.044  
+Iteration 3:   log likelihood =  -25163.63  
+Iteration 4:   log likelihood = -25163.627  
+Iteration 5:   log likelihood = -25163.627  
+
+Mixed-effects logistic regression               Number of obs     =      6,389
+Binomial variable: q28base
+Group variable: prac_code                       Number of groups  =      6,389
+
+                                                Obs per group:
+                                                              min =          1
+                                                              avg =        1.0
+                                                              max =          1
+
+Integration method: mvaghermite                 Integration pts.  =          7
+
+                                                Wald chi2(6)      =     172.62
+Log likelihood = -25163.627                     Prob > chi2       =     0.0000
+------------------------------------------------------------------------------------
+            q28_12 | Odds ratio   Std. err.      z    P>|z|     [95% conf. interval]
+-------------------+----------------------------------------------------------------
+no_of_pts_cut_tens |
+ 10,000 to 19,999  |   .8181896   .0161922   -10.14   0.000     .7870611    .8505494
+ 20,000 to 29,999  |   .6929906   .0334819    -7.59   0.000     .6303786    .7618215
+ 30,000 to 39,999  |      .6172   .0648279    -4.59   0.000     .5023652    .7582846
+ 40,000 to 49,999  |   .6147523   .1075912    -2.78   0.005     .4362411    .8663106
+ 50,000 to 59,999  |   .5200591   .1241273    -2.74   0.006     .3257531    .8302653
+         >=60,000  |   .4938755   .1337617    -2.60   0.009     .2904539     .839765
+                   |
+             _cons |   3.994281   .0463209   119.42   0.000     3.904517    4.086107
+-------------------+----------------------------------------------------------------
+prac_code          |
+         var(_cons)|   .4720549   .0098163                      .4532021     .491692
+------------------------------------------------------------------------------------
+Note: Estimates are transformed only in the first equation to odds ratios.
+Note: _cons estimates baseline odds (conditional on zero random effects).
+LR test vs. logistic model: chibar2(01) = 37268.42    Prob >= chibar2 = 0.0000
+
+. *overall univariable model continuous no of patients five thous
+. melogit q28_12 no_of_pts_five_thous || prac_code:, bin(q28base) or
+
+Fitting fixed-effects model:
+
+Iteration 0:   log likelihood = -44576.485  
+Iteration 1:   log likelihood = -43683.537  
+Iteration 2:   log likelihood = -43682.694  
+Iteration 3:   log likelihood = -43682.694  
+
+Refining starting values:
+
+Grid node 0:   log likelihood = -25777.659
+
+Fitting full model:
+
+Iteration 0:   log likelihood = -25777.659  
+Iteration 1:   log likelihood = -25171.586  (backed up)
+Iteration 2:   log likelihood = -25148.147  
+Iteration 3:   log likelihood = -25148.048  
+Iteration 4:   log likelihood = -25148.048  
+
+Mixed-effects logistic regression               Number of obs     =      6,389
+Binomial variable: q28base
+Group variable: prac_code                       Number of groups  =      6,389
+
+                                                Obs per group:
+                                                              min =          1
+                                                              avg =        1.0
+                                                              max =          1
+
+Integration method: mvaghermite                 Integration pts.  =          7
+
+                                                Wald chi2(1)      =     204.55
+Log likelihood = -25148.048                     Prob > chi2       =     0.0000
+--------------------------------------------------------------------------------------
+              q28_12 | Odds ratio   Std. err.      z    P>|z|     [95% conf. interval]
+---------------------+----------------------------------------------------------------
+no_of_pts_five_thous |   .9037945   .0063921   -14.30   0.000     .8913526    .9164101
+               _cons |   4.452734   .0730667    91.02   0.000     4.311804     4.59827
+---------------------+----------------------------------------------------------------
+prac_code            |
+           var(_cons)|   .4696683   .0097696                      .4509053    .4892121
+--------------------------------------------------------------------------------------
+Note: Estimates are transformed only in the first equation to odds ratios.
+Note: _cons estimates baseline odds (conditional on zero random effects).
+LR test vs. logistic model: chibar2(01) = 37069.29    Prob >= chibar2 = 0.0000
+
+. 
+. *overall multivariate model no of pts continuous five thousand increase per unit
+. *USED IN TEXT
+. xi: melogit q28_12 no_of_pts_five_thous gp_pt_ratio imd_value q30_recoded_1pct q49_1pct q112_1pct percent_age_over_74 ///
+> || prac_code: , bin(q28base) or
+
+Fitting fixed-effects model:
+
+Iteration 0:   log likelihood = -39606.392  
+Iteration 1:   log likelihood = -38958.091  
+Iteration 2:   log likelihood = -38957.378  
+Iteration 3:   log likelihood = -38957.378  
+
+Refining starting values:
+
+Grid node 0:   log likelihood = -25483.646
+
+Fitting full model:
+
+Iteration 0:   log likelihood = -25483.646  (not concave)
+Iteration 1:   log likelihood = -24579.499  
+Iteration 2:   log likelihood = -24532.175  
+Iteration 3:   log likelihood = -24531.115  
+Iteration 4:   log likelihood = -24531.113  
+
+Mixed-effects logistic regression               Number of obs     =      6,389
+Binomial variable: q28base
+Group variable: prac_code                       Number of groups  =      6,389
+
+                                                Obs per group:
+                                                              min =          1
+                                                              avg =        1.0
+                                                              max =          1
+
+Integration method: mvaghermite                 Integration pts.  =          7
+
+                                                Wald chi2(7)      =    1588.69
+Log likelihood = -24531.113                     Prob > chi2       =     0.0000
+--------------------------------------------------------------------------------------
+              q28_12 | Odds ratio   Std. err.      z    P>|z|     [95% conf. interval]
+---------------------+----------------------------------------------------------------
+no_of_pts_five_thous |   .8884635   .0058322   -18.02   0.000     .8771058    .8999682
+         gp_pt_ratio |   .9999416   4.22e-06   -13.83   0.000     .9999334    .9999499
+           imd_value |    .993981   .0009211    -6.51   0.000     .9921773    .9957879
+    q30_recoded_1pct |   .1561769   .0242069   -11.98   0.000     .1152613    .2116168
+            q49_1pct |   2.250973   .1135001    16.09   0.000     2.039156    2.484793
+           q112_1pct |    .715574   .1339541    -1.79   0.074     .4958054    1.032756
+ percent_age_over_74 |   3.976558   .7765868     7.07   0.000     2.711909    5.830952
+               _cons |   10.08487   1.297937    17.96   0.000     7.836449     12.9784
+---------------------+----------------------------------------------------------------
+prac_code            |
+           var(_cons)|   .3768468   .0080284                      .3614353    .3929154
+--------------------------------------------------------------------------------------
+Note: Estimates are transformed only in the first equation to odds ratios.
+Note: _cons estimates baseline odds (conditional on zero random effects).
+LR test vs. logistic model: chibar2(01) = 28852.53    Prob >= chibar2 = 0.0000
+
+. reformat, output(necp) dpcoef(2) dpp(3) to(-) nocons eform
+
+MEGLM formatted output
+
+Outcome variable: q28_12 (Overall experience of GP practice - Summary result - Good (Combined 'very good' ), n=6389
+----------------------------------------------------------------------------
+Covariate                      N  exp(coef.)    95% Conf. Interval     P>|z|
+----------------------------------------------------------------------------
+No_of_pts_five_thous                                                
+  per unit                  6389        0.89           (0.88-0.90)    <0.001
+Gp_pt_ratio                                                         
+  per unit                  6389        1.00           (1.00-1.00)    <0.001
+Deprivation score (IMD 2019) from https://fingertips.phe.org.uk/api#/
+  per unit                  6389        0.99           (0.99-1.00)    <0.001
+Long-term health condition - % Yes (base excluding 'don't know / can't say')
+  per unit                  6389        0.16           (0.12-0.21)    <0.001
+Ethnic group - % White - English/Welsh/Scottish/Northern Irish/British
+  per unit                  6389        2.25           (2.04-2.48)    <0.001
+Which of the following best describes you - % Female                
+  per unit                  6389        0.72           (0.50-1.03)     0.074
+Percent_age_over_74                                                 
+  per unit                  6389        3.98           (2.71-5.83)    <0.001
+----------------------------------------------------------------------------
+
+. 
+. 
+. *overall multivariate model categorical
+. xi: melogit q28_12 i.no_of_pts_cut_tens gp_pt_ratio imd_value q30_recoded_1pct q49_1pct q112_1pct percent_age_over_74  ///
+> || prac_code: , bin(q28base) or
+i.no_of_pts_c~s   _Ino_of_pts_0-60    (naturally coded; _Ino_of_pts_0 omitted)
+
+Fitting fixed-effects model:
+
+Iteration 0:   log likelihood = -39642.196  
+Iteration 1:   log likelihood = -38984.857  
+Iteration 2:   log likelihood = -38984.072  
+Iteration 3:   log likelihood = -38984.072  
+
+Refining starting values:
+
+Grid node 0:   log likelihood = -25486.088
+
+Fitting full model:
+
+Iteration 0:   log likelihood = -25486.088  (not concave)
+Iteration 1:   log likelihood =  -24584.73  
+Iteration 2:   log likelihood = -24540.371  
+Iteration 3:   log likelihood = -24539.518  
+Iteration 4:   log likelihood = -24539.517  
+
+Mixed-effects logistic regression               Number of obs     =      6,389
+Binomial variable: q28base
+Group variable: prac_code                       Number of groups  =      6,389
+
+                                                Obs per group:
+                                                              min =          1
+                                                              avg =        1.0
+                                                              max =          1
+
+Integration method: mvaghermite                 Integration pts.  =          7
+
+                                                Wald chi2(12)     =    1568.80
+Log likelihood = -24539.517                     Prob > chi2       =     0.0000
+-------------------------------------------------------------------------------------
+             q28_12 | Odds ratio   Std. err.      z    P>|z|     [95% conf. interval]
+--------------------+----------------------------------------------------------------
+     _Ino_of_pts_10 |   .7644344   .0140023   -14.66   0.000     .7374771    .7923771
+     _Ino_of_pts_20 |   .6523855   .0287597    -9.69   0.000      .598384    .7112604
+     _Ino_of_pts_30 |   .5869844   .0557928    -5.61   0.000     .4872142    .7071851
+     _Ino_of_pts_40 |   .5397548   .0855244    -3.89   0.000     .3956609    .7363255
+     _Ino_of_pts_50 |   .5290024   .1140888    -2.95   0.003     .3466417    .8072992
+     _Ino_of_pts_60 |   .6342608   .1552194    -1.86   0.063     .3926067    1.024656
+        gp_pt_ratio |     .99994   4.22e-06   -14.21   0.000     .9999317    .9999483
+          imd_value |   .9939878   .0009226    -6.50   0.000     .9921811    .9957978
+   q30_recoded_1pct |   .1502733   .0233188   -12.21   0.000     .1108654    .2036891
+           q49_1pct |   2.251663   .1137076    16.07   0.000     2.039474    2.485928
+          q112_1pct |   .7033711   .1319109    -1.88   0.061     .4870229    1.015827
+percent_age_over_74 |   4.165619     .81407     7.30   0.000     2.840094    6.109792
+              _cons |   9.243185   1.190857    17.26   0.000     7.180522    11.89836
+--------------------+----------------------------------------------------------------
+prac_code           |
+          var(_cons)|   .3777721   .0080484                      .3623224    .3938806
+-------------------------------------------------------------------------------------
+Note: Estimates are transformed only in the first equation to odds ratios.
+Note: _cons estimates baseline odds (conditional on zero random effects).
+LR test vs. logistic model: chibar2(01) = 28889.11    Prob >= chibar2 = 0.0000
+
+. reformat, output(necp) dpcoef(2) dpp(3) to(-) nocons eform
+
+MEGLM formatted output
+
+Outcome variable: q28_12 (Overall experience of GP practice - Summary result - Good (Combined 'very good' ), n=6389
+----------------------------------------------------------------------------
+Covariate                      N  exp(coef.)    95% Conf. Interval     P>|z|
+----------------------------------------------------------------------------
+No_of_pts_cut_tens                                                  
+  1000 to 9,999*            4019           1                                
+  10,000 to 19,999          2052        0.76           (0.74-0.79)    <0.001
+  20,000 to 29,999           238        0.65           (0.60-0.71)    <0.001
+  30,000 to 39,999            47        0.59           (0.49-0.71)    <0.001
+  40,000 to 49,999            17        0.54           (0.40-0.74)    <0.001
+  50,000 to 59,999             9        0.53           (0.35-0.81)     0.003
+  >=60,000                     7        0.63           (0.39-1.02)     0.063
+Gp_pt_ratio                                                         
+  per unit                  6389        1.00           (1.00-1.00)    <0.001
+Deprivation score (IMD 2019) from https://fingertips.phe.org.uk/api#/
+  per unit                  6389        0.99           (0.99-1.00)    <0.001
+Long-term health condition - % Yes (base excluding 'don't know / can't say')
+  per unit                  6389        0.15           (0.11-0.20)    <0.001
+Ethnic group - % White - English/Welsh/Scottish/Northern Irish/British
+  per unit                  6389        2.25           (2.04-2.49)    <0.001
+Which of the following best describes you - % Female                
+  per unit                  6389        0.70           (0.49-1.02)     0.061
+Percent_age_over_74                                                 
+  per unit                  6389        4.17           (2.84-6.11)    <0.001
+----------------------------------------------------------------------------
+* Baseline category
+
+. *wald test
+. test _Ino_of_pts_10 _Ino_of_pts_20 _Ino_of_pts_30 _Ino_of_pts_40 _Ino_of_pts_50  _Ino_of_pts_60
+
+ ( 1)  [q28_12]_Ino_of_pts_10 = 0
+ ( 2)  [q28_12]_Ino_of_pts_20 = 0
+ ( 3)  [q28_12]_Ino_of_pts_30 = 0
+ ( 4)  [q28_12]_Ino_of_pts_40 = 0
+ ( 5)  [q28_12]_Ino_of_pts_50 = 0
+ ( 6)  [q28_12]_Ino_of_pts_60 = 0
+
+           chi2(  6) =  307.07
+         Prob > chi2 =    0.0000
+
+. 
+. 
+. 
+. 
+. 
+. 
+. *put tables in word doc
+. putdocx clear
+
+. putdocx begin, pagesize(A4) font("Garamond", 12, black)
+
+. putdocx paragraph, font("", 14) halign(center)
+
+. putdocx text ("Multivariate model for overall satisfaction with appointments"), bold
+
+. putdocx paragraph, font("", 12, black) halign(right)
+
+. melogit q18_12 i.no_of_pts_cut_tens gp_pt_ratio imd_value q30_recoded_1pct q49_1pct q112_1pct percent_age_over_74 ///
+> || prac_code: , bin(q18base) or
+
+Fitting fixed-effects model:
+
+Iteration 0:   log likelihood = -46475.734  
+Iteration 1:   log likelihood = -46219.658  
+Iteration 2:   log likelihood = -46219.611  
+Iteration 3:   log likelihood = -46219.611  
+
+Refining starting values:
+
+Grid node 0:   log likelihood = -27036.902
+
+Fitting full model:
+
+Iteration 0:   log likelihood = -27036.902  (not concave)
+Iteration 1:   log likelihood = -26222.654  
+Iteration 2:   log likelihood = -26194.761  
+Iteration 3:   log likelihood = -26194.545  
+Iteration 4:   log likelihood = -26194.544  
+
+Mixed-effects logistic regression               Number of obs     =      6,389
+Binomial variable: q18base
+Group variable: prac_code                       Number of groups  =      6,389
+
+                                                Obs per group:
+                                                              min =          1
+                                                              avg =        1.0
+                                                              max =          1
+
+Integration method: mvaghermite                 Integration pts.  =          7
+
+                                                Wald chi2(12)     =    1382.30
+Log likelihood = -26194.544                     Prob > chi2       =     0.0000
+-------------------------------------------------------------------------------------
+             q18_12 | Odds ratio   Std. err.      z    P>|z|     [95% conf. interval]
+--------------------+----------------------------------------------------------------
+ no_of_pts_cut_tens |
+  10,000 to 19,999  |   .6842752   .0127299   -20.39   0.000     .6597745    .7096858
+  20,000 to 29,999  |   .5887805   .0265299   -11.76   0.000     .5390128    .6431433
+  30,000 to 39,999  |   .5269892    .051472    -6.56   0.000     .4351742    .6381756
+  40,000 to 49,999  |   .4790522   .0778517    -4.53   0.000     .3483794    .6587389
+  50,000 to 59,999  |   .4546605   .1010504    -3.55   0.000     .2941059    .7028632
+          >=60,000  |    .642426   .1623295    -1.75   0.080     .3915072     1.05416
+                    |
+        gp_pt_ratio |   .9999535   4.33e-06   -10.73   0.000      .999945     .999962
+          imd_value |    .994595   .0009396    -5.74   0.000     .9927553    .9964382
+   q30_recoded_1pct |   .1117803   .0176144   -13.91   0.000     .0820792    .1522292
+           q49_1pct |   1.877547   .0965641    12.25   0.000     1.697512    2.076677
+          q112_1pct |   .3108336   .0593076    -6.12   0.000      .213854    .4517921
+percent_age_over_74 |   4.452668   .8834451     7.53   0.000      3.01811    6.569095
+              _cons |   8.802604   1.153842    16.59   0.000     6.808258    11.38116
+--------------------+----------------------------------------------------------------
+prac_code           |
+          var(_cons)|   .4058804   .0082448                      .3900383    .4223659
+-------------------------------------------------------------------------------------
+Note: Estimates are transformed only in the first equation to odds ratios.
+Note: _cons estimates baseline odds (conditional on zero random effects).
+LR test vs. logistic model: chibar2(01) = 40050.13    Prob >= chibar2 = 0.0000
+
+. putdocx table table1 = etable, halign(center) cellmargin(top, 4pt)
+
+. putdocx save "multivariate model", replace
+successfully replaced "C:/Users/peter/OneDrive - University of Bristol/NHS data/2022 data/multivariate model.docx"
+
+. 
+. putdocx begin, pagesize(A4) font("Garamond", 12, black)
+
+. putdocx paragraph, font("", 14) halign(center)
+
+. putdocx text ("Multivariate model for overall satisfaction with gp practice"), bold
+
+. putdocx paragraph, font("", 12, black) halign(right)
+
+. melogit q28_12 i.no_of_pts_cut_tens gp_pt_ratio imd_value q30_recoded_1pct q49_1pct q112_1pct percent_age_over_74 ///
+> || prac_code: , bin(q28base) or
+
+Fitting fixed-effects model:
+
+Iteration 0:   log likelihood = -39642.196  
+Iteration 1:   log likelihood = -38984.857  
+Iteration 2:   log likelihood = -38984.072  
+Iteration 3:   log likelihood = -38984.072  
+
+Refining starting values:
+
+Grid node 0:   log likelihood = -25486.088
+
+Fitting full model:
+
+Iteration 0:   log likelihood = -25486.088  (not concave)
+Iteration 1:   log likelihood =  -24584.73  
+Iteration 2:   log likelihood = -24540.371  
+Iteration 3:   log likelihood = -24539.518  
+Iteration 4:   log likelihood = -24539.517  
+
+Mixed-effects logistic regression               Number of obs     =      6,389
+Binomial variable: q28base
+Group variable: prac_code                       Number of groups  =      6,389
+
+                                                Obs per group:
+                                                              min =          1
+                                                              avg =        1.0
+                                                              max =          1
+
+Integration method: mvaghermite                 Integration pts.  =          7
+
+                                                Wald chi2(12)     =    1568.80
+Log likelihood = -24539.517                     Prob > chi2       =     0.0000
+-------------------------------------------------------------------------------------
+             q28_12 | Odds ratio   Std. err.      z    P>|z|     [95% conf. interval]
+--------------------+----------------------------------------------------------------
+ no_of_pts_cut_tens |
+  10,000 to 19,999  |   .7644344   .0140023   -14.66   0.000     .7374771    .7923771
+  20,000 to 29,999  |   .6523855   .0287597    -9.69   0.000      .598384    .7112604
+  30,000 to 39,999  |   .5869844   .0557928    -5.61   0.000     .4872142    .7071851
+  40,000 to 49,999  |   .5397548   .0855244    -3.89   0.000     .3956609    .7363255
+  50,000 to 59,999  |   .5290024   .1140888    -2.95   0.003     .3466417    .8072992
+          >=60,000  |   .6342608   .1552194    -1.86   0.063     .3926067    1.024656
+                    |
+        gp_pt_ratio |     .99994   4.22e-06   -14.21   0.000     .9999317    .9999483
+          imd_value |   .9939878   .0009226    -6.50   0.000     .9921811    .9957978
+   q30_recoded_1pct |   .1502733   .0233188   -12.21   0.000     .1108654    .2036891
+           q49_1pct |   2.251663   .1137076    16.07   0.000     2.039474    2.485928
+          q112_1pct |   .7033711   .1319109    -1.88   0.061     .4870229    1.015827
+percent_age_over_74 |   4.165619     .81407     7.30   0.000     2.840094    6.109792
+              _cons |   9.243185   1.190857    17.26   0.000     7.180522    11.89836
+--------------------+----------------------------------------------------------------
+prac_code           |
+          var(_cons)|   .3777721   .0080484                      .3623224    .3938806
+-------------------------------------------------------------------------------------
+Note: Estimates are transformed only in the first equation to odds ratios.
+Note: _cons estimates baseline odds (conditional on zero random effects).
+LR test vs. logistic model: chibar2(01) = 28889.11    Prob >= chibar2 = 0.0000
+
+. putdocx table table2 = etable, halign(center) cellmargin(top, 4pt)
+
+. putdocx save "multivariate model", append
+successfully appended to "C:/Users/peter/OneDrive - University of Bristol/NHS data/2022 data/multivariate model.docx"
+
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. 
+. **************** OTHER WORKINGS NOT USED IN PAPER ****()
+. 
+. *excludes practice with >50k patients and plots as linear effect
+. melogit q18_12 no_of_pts_cut_tens if no_of_pts_thous <60  || prac_code:, bin(q18base) or
+
+Fitting fixed-effects model:
+
+Iteration 0:   log likelihood = -51021.433  
+Iteration 1:   log likelihood = -50752.599  
+Iteration 2:   log likelihood = -50752.584  
+Iteration 3:   log likelihood = -50752.584  
+
+Refining starting values:
+
+Grid node 0:   log likelihood = -27222.433
+
+Fitting full model:
+
+Iteration 0:   log likelihood = -27222.433  
+Iteration 1:   log likelihood = -26645.649  (backed up)
+Iteration 2:   log likelihood = -26621.248  
+Iteration 3:   log likelihood = -26618.162  
+Iteration 4:   log likelihood = -26618.159  
+Iteration 5:   log likelihood = -26618.159  
+
+Mixed-effects logistic regression               Number of obs     =      6,382
+Binomial variable: q18base
+Group variable: prac_code                       Number of groups  =      6,382
+
+                                                Obs per group:
+                                                              min =          1
+                                                              avg =        1.0
+                                                              max =          1
+
+Integration method: mvaghermite                 Integration pts.  =          7
+
+                                                Wald chi2(1)      =     358.78
+Log likelihood = -26618.159                     Prob > chi2       =     0.0000
+------------------------------------------------------------------------------------
+            q18_12 | Odds ratio   Std. err.      z    P>|z|     [95% conf. interval]
+-------------------+----------------------------------------------------------------
+no_of_pts_cut_tens |   .9741406   .0013474   -18.94   0.000     .9715033     .976785
+             _cons |   1.815683   .0198018    54.69   0.000     1.777284    1.854911
+-------------------+----------------------------------------------------------------
+prac_code          |
+         var(_cons)|   .4750323   .0095155                      .4567436    .4940534
+------------------------------------------------------------------------------------
+Note: Estimates are transformed only in the first equation to odds ratios.
+Note: _cons estimates baseline odds (conditional on zero random effects).
+LR test vs. logistic model: chibar2(01) = 48268.85    Prob >= chibar2 = 0.0000
+
+. 
+. *checking linear model of appointment satisfaction excluding practices with 60K or more pts
+. melogit q18_12 no_of_pts_cut_tens if no_of_pts_thous <60  || prac_code:, bin(q18base) or
+
+Fitting fixed-effects model:
+
+Iteration 0:   log likelihood = -51021.433  
+Iteration 1:   log likelihood = -50752.599  
+Iteration 2:   log likelihood = -50752.584  
+Iteration 3:   log likelihood = -50752.584  
+
+Refining starting values:
+
+Grid node 0:   log likelihood = -27222.433
+
+Fitting full model:
+
+Iteration 0:   log likelihood = -27222.433  
+Iteration 1:   log likelihood = -26645.649  (backed up)
+Iteration 2:   log likelihood = -26621.248  
+Iteration 3:   log likelihood = -26618.162  
+Iteration 4:   log likelihood = -26618.159  
+Iteration 5:   log likelihood = -26618.159  
+
+Mixed-effects logistic regression               Number of obs     =      6,382
+Binomial variable: q18base
+Group variable: prac_code                       Number of groups  =      6,382
+
+                                                Obs per group:
+                                                              min =          1
+                                                              avg =        1.0
+                                                              max =          1
+
+Integration method: mvaghermite                 Integration pts.  =          7
+
+                                                Wald chi2(1)      =     358.78
+Log likelihood = -26618.159                     Prob > chi2       =     0.0000
+------------------------------------------------------------------------------------
+            q18_12 | Odds ratio   Std. err.      z    P>|z|     [95% conf. interval]
+-------------------+----------------------------------------------------------------
+no_of_pts_cut_tens |   .9741406   .0013474   -18.94   0.000     .9715033     .976785
+             _cons |   1.815683   .0198018    54.69   0.000     1.777284    1.854911
+-------------------+----------------------------------------------------------------
+prac_code          |
+         var(_cons)|   .4750323   .0095155                      .4567436    .4940534
+------------------------------------------------------------------------------------
+Note: Estimates are transformed only in the first equation to odds ratios.
+Note: _cons estimates baseline odds (conditional on zero random effects).
+LR test vs. logistic model: chibar2(01) = 48268.85    Prob >= chibar2 = 0.0000
+
+. *generate predicted values from linear model
+. predict linear_fit, xb 
+
+. *put predicted values on odds scale
+. gen linear_fit_odds = exp(linear_fit)
+
+. *tabodds but adding the linear fit line
+. tabodds q18_12 no_of_pts_cut_tens if no_of_pts_thous <60 , bin(q18base) graph ci yscale(log) addplot(line linear_fit_odds no_of_pts_cut_te
+> ns if no_of_pts_thous <60, sort)
+
+--------------------------------------------------------------------------
+ no_of_~ns  |      Cases     Controls       Odds      [95% conf. interval]
+------------+-------------------------------------------------------------
+  1000 ~999 |     260785       149676    1.74233        1.73129   1.75344
+  10,00~999 |     120820        93292    1.29507        1.28406   1.30618
+  20,00~999 |      13177        11788    1.11783        1.09040   1.14596
+  30,00~999 |       3099         3143    0.98600        0.93827   1.03616
+  40,00~999 |       1073         1087    0.98712        0.90728   1.07399
+  50,00~999 |        517          660    0.78333        0.69816   0.87890
+--------------------------------------------------------------------------
+Test of homogeneity (equal odds): chi2(5)  =  4239.04
+                                  Pr>chi2  =   0.0000
+
+Score test for trend of odds:     chi2(1)  =  3955.17
+                                  Pr>chi2  =   0.0000
+
+. graph export checking_linear_model_of_appointments.png, replace
+file checking_linear_model_of_appointments.png saved as PNG format
+
+. 
+. 
+. *checking linear model of overall satisfaction excluding practices with 60K or more pts
+. melogit q28_12 no_of_pts_cut_tens if no_of_pts_thous <60  || prac_code:, bin(q28base) or
+
+Fitting fixed-effects model:
+
+Iteration 0:   log likelihood = -44686.698  
+Iteration 1:   log likelihood = -43787.983  
+Iteration 2:   log likelihood = -43787.114  
+Iteration 3:   log likelihood = -43787.114  
+
+Refining starting values:
+
+Grid node 0:   log likelihood = -25757.316
+
+Fitting full model:
+
+Iteration 0:   log likelihood = -25757.316  
+Iteration 1:   log likelihood = -25203.472  (backed up)
+Iteration 2:   log likelihood = -25138.609  
+Iteration 3:   log likelihood = -25138.191  
+Iteration 4:   log likelihood = -25138.191  
+
+Mixed-effects logistic regression               Number of obs     =      6,382
+Binomial variable: q28base
+Group variable: prac_code                       Number of groups  =      6,382
+
+                                                Obs per group:
+                                                              min =          1
+                                                              avg =        1.0
+                                                              max =          1
+
+Integration method: mvaghermite                 Integration pts.  =          7
+
+                                                Wald chi2(1)      =     162.72
+Log likelihood = -25138.191                     Prob > chi2       =     0.0000
+------------------------------------------------------------------------------------
+            q28_12 | Odds ratio   Std. err.      z    P>|z|     [95% conf. interval]
+-------------------+----------------------------------------------------------------
+no_of_pts_cut_tens |    .982369   .0013699   -12.76   0.000     .9796877    .9850576
+             _cons |   3.968751   .0439129   124.58   0.000      3.88361    4.055759
+-------------------+----------------------------------------------------------------
+prac_code          |
+         var(_cons)|   .4728756   .0098376                      .4539821    .4925554
+------------------------------------------------------------------------------------
+Note: Estimates are transformed only in the first equation to odds ratios.
+Note: _cons estimates baseline odds (conditional on zero random effects).
+LR test vs. logistic model: chibar2(01) = 37297.85    Prob >= chibar2 = 0.0000
+
+. *generate predicted values from linear model
+. predict linear_fit2, xb
+
+. *put predicted values on odds scale
+. gen linear_fit_odds2 = exp(linear_fit2)
+
+. *tabodds but adding the linear fit line
+. tabodds q28_12 no_of_pts_cut_tens if no_of_pts_thous <60 , bin(q28base) graph ci yscale(log) addplot(line linear_fit_odds2 no_of_pts_cut_t
+> ens if no_of_pts_thous <60, sort)
+
+--------------------------------------------------------------------------
+ no_of_~ns  |      Cases     Controls       Odds      [95% conf. interval]
+------------+-------------------------------------------------------------
+  1000 ~999 |     340135        96270    3.53314        3.50795   3.55851
+  10,00~999 |     169953        56927    2.98546        2.95725   3.01393
+  20,00~999 |      19140         7430    2.57604        2.50795   2.64599
+  30,00~999 |       4610         2013    2.29011        2.17329   2.41322
+  40,00~999 |       1594          685    2.32701        2.12770   2.54499
+  50,00~999 |        826          434    1.90323        1.69444   2.13774
+--------------------------------------------------------------------------
+Test of homogeneity (equal odds): chi2(5)  =  1431.21
+                                  Pr>chi2  =   0.0000
+
+Score test for trend of odds:     chi2(1)  =  1410.26
+                                  Pr>chi2  =   0.0000
+
+. graph export checking_linear_model_of_overall.png, replace
+file checking_linear_model_of_overall.png saved as PNG format
+
+. 
+. 
+. 
+. *** summary of practices in groups of 5k
+. tab no_of_pts_cut, sum(q18_12pct2)
+
+no_of_pts_c |        Summary of q18_12pct2
+         ut |        Mean   Std. dev.       Freq.
+------------+------------------------------------
+          0 |   67.417996   15.752196       1,356
+          5 |   61.196951   15.293415       2,663
+         10 |   57.038485   14.508154       1,534
+         15 |   54.528357   14.119033         518
+         20 |   53.174587   14.910222         179
+         25 |   52.506664   11.261768          59
+         30 |   52.081004   15.234415          31
+         35 |   45.943777   13.687624          16
+         40 |   51.778836   15.706024          10
+         45 |    45.40696   14.969115           7
+         50 |   53.970723   14.046673           4
+         55 |   38.038244   10.186688           5
+         60 |   37.573877   4.0328505           2
+         65 |   49.557522           0           1
+         75 |   48.062016           0           1
+         85 |    46.07843           0           1
+         90 |   42.741936           0           1
+        105 |   80.681816           0           1
+------------+------------------------------------
+      Total |   60.522577   15.702917       6,389
+
+. tab no_of_pts_cut, sum(q28_12pct2)
+
+no_of_pts_c |        Summary of q28_12pct2
+         ut |        Mean   Std. dev.       Freq.
+------------+------------------------------------
+          0 |   79.099675   12.060431       1,356
+          5 |   77.008367   12.067013       2,663
+         10 |   75.188706   11.805298       1,534
+         15 |   73.775899   11.213432         518
+         20 |   71.973836   11.598891         179
+         25 |    72.38454   10.724454          59
+         30 |   71.717497   11.663733          31
+         35 |   66.083129   10.119132          16
+         40 |    70.20289   16.963482          10
+         45 |   67.038593   13.661334           7
+         50 |   75.210976   8.2024301           4
+         55 |   59.806091   9.4189875           5
+         60 |   60.342264   4.5246402           2
+         65 |   69.672134           0           1
+         75 |   58.620689           0           1
+         85 |    68.86792           0           1
+         90 |   63.076927           0           1
+        105 |   80.434784           0           1
+------------+------------------------------------
+      Total |   76.468139   12.071672       6,389
+
+. 
+. 
+. 
+. **** ANALYSIS USING LINEAR REGRESSION TO EXPLORE DATA NOTE OUTCOME BINARY (SATISFIED OR NOT CONVERTED TO PERCENTAGE PER PRACTICE THEN FITT
+> ED LINEARLY *********
+. 
+. 
+. twoway scatter q18_12pct2 no_of_pts_cut, ///
+> msize(vtiny) ytitle("Patients reporting good experience (%)", margin(medium)) ///
+> xtitle("Number of patients registered at practice (1000)", margin(medium)) ///
+> title("Making an Appointment") ///
+> subtitle("Overall Experience") ///
+> xlabel(0(10)110) ylabel(0(10)100) xmtick(5(10)85) ///
+> legend(lab(1 "GP Practice (grouped 5k increments)")) ///
+> legend(lab(2 "95% Confidence Interveral")) ///
+> legend(lab(3 "Linear fit (ungrouped data)")) ///
+> legend(lab(5 "Quadratic fit (ungrouped data)")) ///
+> legend(order (1 3 5 2)) ///
+> legend(cols(1)) ///
+> ysize(22) xsize(18)  ///
+> || lfitci q18_12pct2 no_of_pts_thous, acolor(%50) alcolor(%0)  || qfitci q18_12pct2 no_of_pts_thous, acolor(%50) alcolor(%0)
+
+. graph export appointments_vs_pts.png, replace
+file appointments_vs_pts.png saved as PNG format
+
+. 
+. *The regression coefficient for no_of_pts tells us that for every 1 thousand increase in patients, good_practice_percentage decreases by c
+> oef%
+. regress q18_12pct2 no_of_pts_thous
+
+      Source |       SS           df       MS      Number of obs   =     6,389
+-------------+----------------------------------   F(1, 6387)      =    444.54
+       Model |  102497.676         1  102497.676   Prob > F        =    0.0000
+    Residual |  1472665.53     6,387  230.572339   R-squared       =    0.0651
+-------------+----------------------------------   Adj R-squared   =    0.0649
+       Total |  1575163.21     6,388  246.581591   Root MSE        =    15.185
+
+---------------------------------------------------------------------------------
+     q18_12pct2 | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+----------------+----------------------------------------------------------------
+no_of_pts_thous |  -.6265037   .0297146   -21.08   0.000    -.6847543   -.5682531
+          _cons |   66.50624   .3415141   194.74   0.000     65.83676    67.17572
+---------------------------------------------------------------------------------
+
+. 
+. twoway scatter q28_12pct2 no_of_pts_cut, ///
+> msize(vtiny) ytitle("Patients reporting good experience (%)", margin(medium)) ///
+> xtitle("Number of patients registered at practice (1000)", margin(medium)) ///
+> title("Your Practice") ///
+> subtitle("Overall Experience") ///
+> xlabel(0(10)110) ylabel(0(10)100) xmtick(5(10)85) ///
+> legend(lab(1 "GP Practice (grouped 5k increments)")) ///
+> legend(lab(2 "95% Confidence Interveral")) ///
+> legend(lab(3 "Linear fit (ungrouped data)")) ///
+> legend(lab(5 "Quadratic fit (ungrouped data)")) ///
+> legend(order (1 3 5 2)) ///
+> legend(cols(1)) ///
+> ysize(22) xsize(18)  ///
+> || lfitci q28_12pct2 no_of_pts_thous, acolor(%50) alcolor(%0)  || qfitci q28_12pct2 no_of_pts_thous, acolor(%50) alcolor(%0)
+
+. graph export overallsatisfaction_vs_pts.png, replace
+file overallsatisfaction_vs_pts.png saved as PNG format
+
+. 
+. *The regression coefficient for no_of_pts tells us that for every 1 thousand increase in patients, good_practice_percentage decreases by c
+> oef%
+. 
+. regress q28_12pct2 no_of_pts_thous
+
+      Source |       SS           df       MS      Number of obs   =     6,389
+-------------+----------------------------------   F(1, 6387)      =    176.79
+       Model |  25073.1618         1  25073.1618   Prob > F        =    0.0000
+    Residual |  905819.789     6,387  141.822419   R-squared       =    0.0269
+-------------+----------------------------------   Adj R-squared   =    0.0268
+       Total |   930892.95     6,388  145.725258   Root MSE        =    11.909
+
+---------------------------------------------------------------------------------
+     q28_12pct2 | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+----------------+----------------------------------------------------------------
+no_of_pts_thous |   -.309864   .0233045   -13.30   0.000    -.3555486   -.2641795
+          _cons |   79.42761   .2678413   296.55   0.000     78.90255    79.95267
+---------------------------------------------------------------------------------
+
+. 
+. *** LOG SCALE
+. 
+. gen ln_no_of_pts = ln(no_of_pts)
+
+. sum ln_no_of_pts
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+ln_no_of_pts |      6,389    8.990453    .5911968   6.929517   11.59717
+
+. 
+. twoway scatter q18_12pct2 ln_no_of_pts, ///
+> msize(vtiny) ytitle("Patients reporting good experience (%)", margin(medium)) ///
+> xtitle("Ln(number of patients))", margin(medium)) ///
+> title("Making an Appointment") ///
+> subtitle("Overall Experience") ///
+> legend(lab(1 "GP Practice")) ///
+> legend(lab(2 "95% Confidence Interveral")) ///
+> legend(lab(3 "Linear fit (ungrouped ln data)")) ///
+> legend(order (1 3 2)) ///
+> legend(cols(1)) ///
+> || lfitci q18_12pct2 ln_no_of_pts, acolor(%50) alcolor(%0)
+
+. graph export appointments_vs_ln_pts.png, replace
+file appointments_vs_ln_pts.png saved as PNG format
+
+. 
+. twoway scatter q28_12pct2 ln_no_of_pts, ///
+> msize(vtiny) ytitle("Patients reporting good experience (%)", margin(medium)) ///
+> xtitle("Ln(number of patients))", margin(medium)) ///
+> title("Your Practice") ///
+> subtitle("Overall Experience") ///
+> legend(lab(1 "GP Practice")) ///
+> legend(lab(2 "95% Confidence Interveral")) ///
+> legend(lab(3 "Linear fit (ungrouped ln data)")) ///
+> legend(order (1 3 2)) ///
+> legend(cols(1)) ///
+> || lfitci q28_12pct2 ln_no_of_pts, acolor(%50) alcolor(%0) 
+
+. graph export overallsatisfaction_vs_ln_pts.png, replace
+file overallsatisfaction_vs_ln_pts.png saved as PNG format
+
+. 
+. 
+. log close
+      name:  <unnamed>
+       log:  C:\Users\peter\OneDrive - University of Bristol\NHS data\2022 data\bjgp_final.log
+  log type:  text
+ closed on:  19 Jul 2022, 15:16:34
+--------------------------------------------------------------------------------------------------------------------------------------------
